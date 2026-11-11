@@ -44,7 +44,8 @@ final class MirrorSession {
         case .starting: "正在启动镜像…"
         case .reconnecting: "连接断了，正在重连…"
         case .running(let transport):
-            "镜像中 · \(transport)" + (fps.map { " · \($0) fps" } ?? "")
+            "镜像中 · \(transport)" + (Prefs.current.lowQuality ? " · 低画质" : "")
+                + (fps.map { " · \($0) fps" } ?? "")
         }
     }
 
@@ -80,8 +81,8 @@ final class MirrorSession {
 
     /// Toolbar buttons and mirrorbar://<action> URLs.
     func perform(_ action: PhoneAction) async -> Bool {
-        if action == .screen {
-            let key = Key.turnScreenOff
+        let toggles: [PhoneAction: String] = [.screen: Key.turnScreenOff, .quality: Key.lowQuality]
+        if let key = toggles[action] {
             UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: key), forKey: key)
             restartIfActive()
             return true
@@ -128,7 +129,13 @@ final class MirrorSession {
         guard !userStopped else { finish(); return }
 
         let adb = ADB(path: prefs.adbPath)
-        if prefs.lockRefreshRate {
+        let low = prefs.lowQuality
+        let maxFps = low ? LowQuality.fps : prefs.fps
+        let bitrate = low ? LowQuality.bitrate : (device.isNetwork ? prefs.bitrateWifi : prefs.bitrateUSB)
+        let maxSize = low ? LowQuality.maxSize : prefs.maxSize
+        let audioBuffer = low ? LowQuality.audioBuffer : 50
+        // 30 fps does not need a locked refresh rate.
+        if prefs.lockRefreshRate && !low {
             await PhoneSettings.lockRefreshRate(adb: adb, serial: device.serial, fps: prefs.fps)
         }
         let size = await adb.screenSize(device.serial)
@@ -144,19 +151,19 @@ final class MirrorSession {
 
         var args = [
             "-s", device.serial,
-            "--max-fps=\(prefs.fps)",
+            "--max-fps=\(maxFps)",
             // USB has bandwidth to spare; Wi-Fi gets a lower cap to ride out jitter.
-            "--video-bit-rate=\(device.isNetwork ? prefs.bitrateWifi : prefs.bitrateUSB)M",
+            "--video-bit-rate=\(bitrate)M",
             "--video-codec=\(prefs.videoCodec.rawValue)",
             "--window-title=Mirrorbar",
             "--print-fps",
             "--disable-screensaver",
             "--keyboard=\(prefs.keyboardMode.rawValue)",
         ]
-        if prefs.maxSize > 0 { args.append("--max-size=\(prefs.maxSize)") }
+        if maxSize > 0 { args.append("--max-size=\(maxSize)") }
         switch prefs.audioMode {
-        case .mac: args += ["--audio-codec=opus", "--audio-buffer=50"]
-        case .both: args += ["--audio-codec=opus", "--audio-buffer=50", "--audio-dup", "--audio-source=playback"]
+        case .mac: args += ["--audio-codec=opus", "--audio-buffer=\(audioBuffer)"]
+        case .both: args += ["--audio-codec=opus", "--audio-buffer=\(audioBuffer)", "--audio-dup", "--audio-source=playback"]
         case .off: args.append("--no-audio")
         }
         if prefs.alwaysOnTop { args.append("--always-on-top") }

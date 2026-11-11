@@ -102,6 +102,7 @@ struct MenuContent: View {
     @AppStorage(Key.turnScreenOff) private var turnScreenOff = true
     @AppStorage(Key.audioMode) private var audioMode = AudioMode.mac.rawValue
     @AppStorage(Key.showToolbar) private var showToolbar = true
+    @AppStorage(Key.lowQuality) private var lowQuality = false
 
     var body: some View {
         Text(monitor.statusText)
@@ -121,6 +122,7 @@ struct MenuContent: View {
         Toggle("显示操作栏", isOn: $showToolbar)
         Toggle("窗口置顶", isOn: restarting($alwaysOnTop))
         Toggle("手机息屏（镜像照常）", isOn: restarting($turnScreenOff))
+        Toggle("低画质（听歌，更流畅）", isOn: restarting($lowQuality))
         Picker("声音", selection: restarting($audioMode)) {
             ForEach(AudioMode.allCases) { Text($0.label).tag($0.rawValue) }
         }

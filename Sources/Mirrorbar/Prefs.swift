@@ -57,6 +57,17 @@ enum Key {
     static let knownIPs = "knownIPs"
     static let pendingRestore = "pendingSettingsRestore"
     static let showToolbar = "showToolbar"
+    static let lowQuality = "lowQuality"
+}
+
+/// Low-quality mode: for listening to music or a video's sound on the Mac.
+/// A small, light video stream leaves Wi-Fi room for audio, and a bigger audio buffer
+/// rides out Wi-Fi jitter (measured up to ~140 ms) so the sound does not stutter.
+enum LowQuality {
+    static let fps = 30
+    static let bitrate = 2      // Mbps
+    static let maxSize = 1024   // longest side, pixels
+    static let audioBuffer = 200  // ms
 }
 
 struct Prefs {
@@ -79,6 +90,7 @@ struct Prefs {
     var screenName: String
     var extraArgs: String
     var showToolbar: Bool
+    var lowQuality: Bool
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -101,6 +113,7 @@ struct Prefs {
             Key.screenName: "",
             Key.extraArgs: "",
             Key.showToolbar: true,
+            Key.lowQuality: false,
         ])
     }
 
@@ -125,7 +138,8 @@ struct Prefs {
             keyboardMode: KeyboardMode(rawValue: d.string(forKey: Key.keyboardMode) ?? "") ?? .sdk,
             screenName: d.string(forKey: Key.screenName) ?? "",
             extraArgs: d.string(forKey: Key.extraArgs) ?? "",
-            showToolbar: d.bool(forKey: Key.showToolbar)
+            showToolbar: d.bool(forKey: Key.showToolbar),
+            lowQuality: d.bool(forKey: Key.lowQuality)
         )
     }
 }

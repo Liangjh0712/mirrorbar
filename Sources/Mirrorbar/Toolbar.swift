@@ -145,6 +145,7 @@ struct ToolButton: View {
     let perform: (PhoneAction) async -> Bool
 
     @AppStorage(Key.turnScreenOff) private var screenOff = true
+    @AppStorage(Key.lowQuality) private var lowQuality = false
     @State private var hovering = false
     @State private var feedback: Bool?
 
@@ -162,15 +163,26 @@ struct ToolButton: View {
         } label: {
             Image(systemName: feedback == nil ? symbol : (feedback! ? "checkmark" : "exclamationmark.triangle"))
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(feedback == false ? Color.orange : (feedback == true ? Color.green : Color.primary))
+                .foregroundStyle(feedback == false ? Color.orange : (feedback == true ? Color.green : (isOn ? Color.accentColor : Color.primary)))
                 .frame(width: 38, height: 34)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
-            .fill(Color.primary.opacity(hovering ? 0.10 : 0)))
+            .fill(isOn ? Color.accentColor.opacity(hovering ? 0.25 : 0.16) : Color.primary.opacity(hovering ? 0.10 : 0)))
         .onHover { hovering = $0 }
-        .help(action == .screen ? (screenOff ? "手机亮屏" : "手机息屏（镜像照常）") : action.help)
+        .help(helpText)
+    }
+
+    /// The low-quality button stays highlighted while the mode is on.
+    private var isOn: Bool { action == .quality && lowQuality }
+
+    private var helpText: String {
+        switch action {
+        case .screen: screenOff ? "手机亮屏" : "手机息屏（镜像照常）"
+        case .quality: lowQuality ? "低画质（听歌）已开，点一下恢复正常画质" : action.help
+        default: action.help
+        }
     }
 
     /// The screen button shows what a click will do.
