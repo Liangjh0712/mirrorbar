@@ -29,6 +29,12 @@ A macOS menu bar app that keeps [scrcpy](https://github.com/Genymobile/scrcpy) m
 - adb：建议用 Android SDK 的 platform-tools。如果同时装了 Homebrew 的 adb，两个版本不一致时会互相重启 adb server、打断镜像，所以 Mirrorbar 会把 scrcpy 固定到设置里指定的那一个 adb
 - 手机打开 USB 调试，并在第一次插线时授权这台 Mac
 
+## 配对手机
+
+最省事的办法：在仓库目录里打开 Claude Code、Codex 这类 AI 编程工具，说「帮我配对手机」。仓库自带配对技能（`.agents/skills/pair-phone`），AI 会自己检查环境、判断卡在哪一步，按你的手机品牌告诉你在手机上点哪里，最后验证镜像能用。
+
+手动配对：手机打开开发者选项和「USB 调试」（小米还要开「USB 调试（安全设置）」，不然只能看不能点），插线后在手机上点「允许」。
+
 ## 构建
 
 ```sh
