@@ -1,0 +1,56 @@
+# Mirrorbar
+
+A macOS menu bar app that keeps [scrcpy](https://github.com/Genymobile/scrcpy) mirroring of an Android phone running smoothly: USB or Wi-Fi, auto reconnect, refresh-rate lock, and a window placed on a high-refresh display.
+
+在 Mac 菜单栏里一键镜像、操作安卓手机：看视频、回消息、刷应用。画面和控制由 scrcpy 完成，Mirrorbar 负责连接、参数和各种琐事。
+
+## 功能
+
+| 功能 | 说明 |
+|---|---|
+| 一键开始 / 停止 | 菜单栏图标，或 ⌘M |
+| USB 和 Wi-Fi 自动切换 | 插 USB 时自动开启无线 adb（`adb tcpip 5555`），并经 USB 记下手机的 Wi-Fi 地址；拔线后自动连 Wi-Fi，不依赖 mDNS |
+| 断线自动重连 | scrcpy 异常退出后 3 秒重连，最多 8 次 |
+| 锁定手机刷新率 | 镜像期间把小米 / HyperOS 手机锁到 60/90/120Hz，结束后恢复原值；App 崩溃后下次连上手机也会恢复 |
+| 选显示器 | 自动把窗口放到刷新率够高的屏幕上（60Hz 屏只能显示 60fps）；手机横屏时窗口横向居中 |
+| 声音 | 只在 Mac 播放 / Mac 和手机都响 / 关闭 |
+| 菜单快捷开关 | 窗口置顶、熄灭手机屏幕、声音，改了立即生效 |
+| 帧率显示 | 菜单里显示实时 fps |
+| 链接控制 | `mirrorbar://start`、`mirrorbar://stop`、`mirrorbar://toggle`，可接快捷指令或 Raycast 绑热键 |
+
+## 依赖
+
+- macOS 14 及以上，Apple 芯片
+- scrcpy：`brew install scrcpy`
+- adb：建议用 Android SDK 的 platform-tools。如果同时装了 Homebrew 的 adb，两个版本不一致时会互相重启 adb server、打断镜像，所以 Mirrorbar 会把 scrcpy 固定到设置里指定的那一个 adb
+- 手机打开 USB 调试，并在第一次插线时授权这台 Mac
+
+## 构建
+
+```sh
+./scripts/build-app.sh            # 生成 build/Mirrorbar.app
+./scripts/build-app.sh --install  # 安装到 ~/Applications 并启动
+```
+
+用本机临时签名（ad-hoc），没有公证。只在自己的 Mac 上构建、使用。
+
+## 使用
+
+1. 插上 USB，菜单栏图标从 `iphone.slash` 变成手机图标
+2. 点「开始镜像」。之后拔线，Mirrorbar 会自动切到 Wi-Fi 重新连上
+3. 帧率、码率、分辨率、显示器、键盘模式在「设置…」里改
+
+输中文：在 Mac 上复制，到镜像窗口按 ⌘V，scrcpy 会把 Mac 剪贴板同步到手机再粘贴。
+
+scrcpy 自带的快捷键都能用（默认修饰键是左 ⌥ 或左 ⌘），见 [scrcpy 快捷键文档](https://github.com/Genymobile/scrcpy/blob/master/doc/shortcuts.md)。
+
+## 已知限制
+
+- 手机锁屏时只能看到锁屏界面，要在手机上解锁
+- 刷新率锁定只适配了小米 / HyperOS（`is_smart_fps`、`user_refresh_rate`），其他手机会跳过这一步
+- 帧率上限取决于手机屏幕当前刷新率和 Mac 显示器刷新率中较低的那个
+- 日志在 `~/Library/Logs/Mirrorbar/mirrorbar.log`
+
+## License
+
+MIT。scrcpy 使用 Apache-2.0 许可，本项目不包含 scrcpy 代码，只调用本机安装的 scrcpy。
