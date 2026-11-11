@@ -147,7 +147,9 @@ struct SettingsView: View {
     let session: MirrorSession
 
     @AppStorage(Key.fps) private var fps = 90
-    @AppStorage(Key.bitrate) private var bitrate = 12
+    @AppStorage(Key.bitrateUSB) private var bitrateUSB = 24
+    @AppStorage(Key.bitrateWifi) private var bitrateWifi = 12
+    @AppStorage(Key.videoCodec) private var videoCodec = VideoCodec.h265.rawValue
     @AppStorage(Key.maxSize) private var maxSize = 0
     @AppStorage(Key.preferUSB) private var preferUSB = true
     @AppStorage(Key.autoWifi) private var autoWifi = true
@@ -167,7 +169,11 @@ struct SettingsView: View {
                 Picker("帧率", selection: $fps) {
                     ForEach([60, 90, 120], id: \.self) { Text("\($0) fps").tag($0) }
                 }
-                Stepper("码率上限：\(bitrate) Mbps", value: $bitrate, in: 2...40, step: 2)
+                Picker("编码", selection: $videoCodec) {
+                    ForEach(VideoCodec.allCases) { Text($0.label).tag($0.rawValue) }
+                }
+                Stepper("USB 码率上限：\(bitrateUSB) Mbps", value: $bitrateUSB, in: 4...60, step: 2)
+                Stepper("Wi-Fi 码率上限：\(bitrateWifi) Mbps", value: $bitrateWifi, in: 2...40, step: 2)
                 Picker("分辨率（最长边）", selection: $maxSize) {
                     Text("原生").tag(0)
                     Text("1920").tag(1920)

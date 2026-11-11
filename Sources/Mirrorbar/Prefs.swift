@@ -12,6 +12,17 @@ enum AudioMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum VideoCodec: String, CaseIterable, Identifiable {
+    case h264, h265
+    var id: String { rawValue }
+    var label: String {
+        switch self {
+        case .h264: "H.264（兼容性最好）"
+        case .h265: "H.265（同码率更清楚）"
+        }
+    }
+}
+
 enum KeyboardMode: String, CaseIterable, Identifiable {
     case sdk, uhid
     var id: String { rawValue }
@@ -28,7 +39,9 @@ enum Key {
     static let scrcpyPath = "scrcpyPath"
     static let adbPath = "adbPath"
     static let fps = "fps"
-    static let bitrate = "bitrate"
+    static let bitrateUSB = "bitrateUSB"
+    static let bitrateWifi = "bitrateWifi"
+    static let videoCodec = "videoCodec"
     static let maxSize = "maxSize"
     static let preferUSB = "preferUSB"
     static let autoWifi = "autoWifi"
@@ -50,7 +63,9 @@ struct Prefs {
     var scrcpyPath: String
     var adbPath: String
     var fps: Int
-    var bitrate: Int
+    var bitrateUSB: Int
+    var bitrateWifi: Int
+    var videoCodec: VideoCodec
     var maxSize: Int
     var preferUSB: Bool
     var autoWifi: Bool
@@ -70,7 +85,9 @@ struct Prefs {
             Key.scrcpyPath: "/opt/homebrew/bin/scrcpy",
             Key.adbPath: NSHomeDirectory() + "/Library/Android/sdk/platform-tools/adb",
             Key.fps: 90,
-            Key.bitrate: 12,
+            Key.bitrateUSB: 24,
+            Key.bitrateWifi: 12,
+            Key.videoCodec: VideoCodec.h265.rawValue,
             Key.maxSize: 0,
             Key.preferUSB: true,
             Key.autoWifi: true,
@@ -93,7 +110,9 @@ struct Prefs {
             scrcpyPath: d.string(forKey: Key.scrcpyPath) ?? "",
             adbPath: d.string(forKey: Key.adbPath) ?? "",
             fps: d.integer(forKey: Key.fps),
-            bitrate: d.integer(forKey: Key.bitrate),
+            bitrateUSB: d.integer(forKey: Key.bitrateUSB),
+            bitrateWifi: d.integer(forKey: Key.bitrateWifi),
+            videoCodec: VideoCodec(rawValue: d.string(forKey: Key.videoCodec) ?? "") ?? .h265,
             maxSize: d.integer(forKey: Key.maxSize),
             preferUSB: d.bool(forKey: Key.preferUSB),
             autoWifi: d.bool(forKey: Key.autoWifi),

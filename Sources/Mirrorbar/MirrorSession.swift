@@ -145,7 +145,9 @@ final class MirrorSession {
         var args = [
             "-s", device.serial,
             "--max-fps=\(prefs.fps)",
-            "--video-bit-rate=\(prefs.bitrate)M",
+            // USB has bandwidth to spare; Wi-Fi gets a lower cap to ride out jitter.
+            "--video-bit-rate=\(device.isNetwork ? prefs.bitrateWifi : prefs.bitrateUSB)M",
+            "--video-codec=\(prefs.videoCodec.rawValue)",
             "--window-title=Mirrorbar",
             "--print-fps",
             "--disable-screensaver",
@@ -231,7 +233,9 @@ final class MirrorSession {
             if let range = line.range(of: #"\d+ fps"#, options: .regularExpression),
                let value = Int(line[range].split(separator: " ")[0]) {
                 fps = value
-                if Date().timeIntervalSince(lastFpsLog) > 30 {
+                // Hidden setting for measuring: defaults write io.github.liangjh0712.mirrorbar fpsLogInterval 1
+                let interval = UserDefaults.standard.object(forKey: "fpsLogInterval") as? Double ?? 30
+                if Date().timeIntervalSince(lastFpsLog) >= interval - 0.05 {
                     lastFpsLog = Date()
                     Log.write("帧率 \(value) fps")
                 }

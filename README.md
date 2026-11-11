@@ -13,6 +13,7 @@ A macOS menu bar app that keeps [scrcpy](https://github.com/Genymobile/scrcpy) m
 | 断线自动重连 | scrcpy 异常退出后 3 秒重连，最多 8 次 |
 | 锁定手机刷新率 | 镜像期间把小米 / HyperOS 手机锁到 60/90/120Hz，结束后恢复原值；App 崩溃后下次连上手机也会恢复 |
 | 选显示器 | 自动把窗口放到刷新率够高的屏幕上（60Hz 屏只能显示 60fps）；手机横屏时窗口横向居中 |
+| 画质 | 默认 H.265；码率上限按连接分开：USB 24M，Wi-Fi 12M，切换连接时自动换 |
 | 声音 | 只在 Mac 播放 / Mac 和手机都响 / 关闭 |
 | 操作栏 | 贴在镜像窗口旁边，跟着窗口走：返回、主页、后台、横竖屏切换、下拉通知栏、截图、音量加减、息屏、锁屏、上滑、下滑 |
 | 手机息屏 | 默认开启：镜像时手机屏幕黑着、画面和操作照常，省电；操作栏的月亮 / 太阳按钮随时切换，窗口位置不变 |
@@ -41,7 +42,7 @@ A macOS menu bar app that keeps [scrcpy](https://github.com/Genymobile/scrcpy) m
 
 1. 插上 USB，菜单栏图标从 `iphone.slash` 变成手机图标
 2. 点「开始镜像」。之后拔线，Mirrorbar 会自动切到 Wi-Fi 重新连上
-3. 帧率、码率、分辨率、显示器、键盘模式在「设置…」里改
+3. 帧率、编码、码率、分辨率、显示器、键盘模式在「设置…」里改
 
 操作栏只在镜像窗口在最前面时出现，鼠标移开 3 秒后变半透明；不想要可以在菜单里关掉「显示操作栏」。按钮直接发给手机，不用先点镜像窗口。
 
@@ -72,7 +73,8 @@ scrcpy 自带的快捷键都能用（默认修饰键是左 ⌥ 或左 ⌘），�
 - 横竖屏切换改的是系统旋转（会关掉自动旋转，停止镜像后恢复）；自己锁定方向的 App（很多视频播放页、小米「设置」）不受影响
 - 刷新率锁定只适配了小米 / HyperOS（`is_smart_fps`、`user_refresh_rate`），其他手机会跳过这一步
 - 帧率上限取决于手机屏幕当前刷新率和 Mac 显示器刷新率中较低的那个
-- 日志在 `~/Library/Logs/Mirrorbar/mirrorbar.log`
+- 菜单里的帧率是 Mac 端实际画出来的帧数；镜像窗口被别的窗口完全挡住时 macOS 会暂停渲染，这时显示的帧率会很低，不代表手机掉帧
+- 日志在 `~/Library/Logs/Mirrorbar/mirrorbar.log`；`defaults write io.github.liangjh0712.mirrorbar fpsLogInterval 1` 可以让日志每秒记一次帧率
 
 ## License
 
