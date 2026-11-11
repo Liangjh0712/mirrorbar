@@ -54,6 +54,34 @@ enum Screens {
         return WindowFrame(x: Int(x), y: Int(y), width: Int(width), height: Int(height))
     }
 
+    /// Height of the scrcpy title bar: SDL positions the content area, CGWindowList reports
+    /// the whole window.
+    static let titleBarHeight = 32
+
+    /// Global frame of the scrcpy window (CG coordinates: origin top-left, y down).
+    static func cgFrame(pid: pid_t) -> CGRect? {
+        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
+                                                    kCGNullWindowID) as? [[String: Any]]
+        else { return nil }
+        for info in list {
+            guard (info[kCGWindowOwnerPID as String] as? pid_t) == pid,
+                  (info[kCGWindowLayer as String] as? Int) == 0,
+                  let dict = info[kCGWindowBounds as String] as? NSDictionary,
+                  let rect = CGRect(dictionaryRepresentation: dict),
+                  rect.width > 100
+            else { continue }
+            return rect
+        }
+        return nil
+    }
+
+    /// The scrcpy window's current place, as launch arguments.
+    static func currentFrame(pid: pid_t) -> WindowFrame? {
+        guard let rect = cgFrame(pid: pid) else { return nil }
+        return WindowFrame(x: Int(rect.minX), y: Int(rect.minY) + titleBarHeight,
+                           width: Int(rect.width), height: Int(rect.height) - titleBarHeight)
+    }
+
     @MainActor
     static func describe() -> String {
         NSScreen.screens.map { "\($0.localizedName) \($0.maximumFramesPerSecond)Hz" }

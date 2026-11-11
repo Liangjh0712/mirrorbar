@@ -77,7 +77,7 @@ struct Prefs {
             Key.lockRefreshRate: true,
             Key.autoReconnect: true,
             Key.alwaysOnTop: false,
-            Key.turnScreenOff: false,
+            Key.turnScreenOff: true,
             Key.stayAwake: true,
             Key.audioMode: AudioMode.mac.rawValue,
             Key.keyboardMode: KeyboardMode.sdk.rawValue,

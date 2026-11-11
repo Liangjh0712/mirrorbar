@@ -45,8 +45,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case "stop": session.stop()
                 case "toggle": session.toggle()
                 default:
-                    if let action = PhoneAction(rawValue: url.host ?? ""), let serial = session.activeSerial {
-                        Task { _ = await PhoneActions.perform(action, serial: serial) }
+                    if let action = PhoneAction(rawValue: url.host ?? "") {
+                        Task { _ = await session.perform(action) }
                     } else {
                         Log.write("未处理的链接：\(url)")
                     }
@@ -99,7 +99,7 @@ struct MenuContent: View {
     let session: MirrorSession
 
     @AppStorage(Key.alwaysOnTop) private var alwaysOnTop = false
-    @AppStorage(Key.turnScreenOff) private var turnScreenOff = false
+    @AppStorage(Key.turnScreenOff) private var turnScreenOff = true
     @AppStorage(Key.audioMode) private var audioMode = AudioMode.mac.rawValue
     @AppStorage(Key.showToolbar) private var showToolbar = true
 
@@ -120,7 +120,7 @@ struct MenuContent: View {
 
         Toggle("显示操作栏", isOn: $showToolbar)
         Toggle("窗口置顶", isOn: restarting($alwaysOnTop))
-        Toggle("熄灭手机屏幕", isOn: restarting($turnScreenOff))
+        Toggle("手机息屏（镜像照常）", isOn: restarting($turnScreenOff))
         Picker("声音", selection: restarting($audioMode)) {
             ForEach(AudioMode.allCases) { Text($0.label).tag($0.rawValue) }
         }

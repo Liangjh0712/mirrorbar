@@ -25,6 +25,8 @@ final class MirrorSession {
     @ObservationIgnored private var launchedAt = Date.distantPast
     @ObservationIgnored private var lastErrorLine: String?
     @ObservationIgnored private var lastFpsLog = Date.distantPast
+    /// Window frame to reuse on the next launch, so a restart keeps where the user put it.
+    @ObservationIgnored private var keepFrame: WindowFrame?
 
     private static let maxRetries = 8
 
@@ -67,11 +69,25 @@ final class MirrorSession {
         }
     }
 
-    /// Applies changed options by restarting scrcpy, keeping the refresh rate locked.
+    /// Applies changed options by restarting scrcpy, keeping the refresh rate locked
+    /// and the window where it is.
     func restartIfActive() {
         guard let process else { return }
+        keepFrame = Screens.currentFrame(pid: process.processIdentifier)
         pendingRestart = true
         process.terminate()
+    }
+
+    /// Toolbar buttons and mirrorbar://<action> URLs.
+    func perform(_ action: PhoneAction) async -> Bool {
+        if action == .screen {
+            let key = Key.turnScreenOff
+            UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: key), forKey: key)
+            restartIfActive()
+            return true
+        }
+        guard let serial = activeSerial else { return false }
+        return await PhoneActions.perform(action, serial: serial)
     }
 
     /// Called when the app quits.
@@ -116,9 +132,15 @@ final class MirrorSession {
             await PhoneSettings.lockRefreshRate(adb: adb, serial: device.serial, fps: prefs.fps)
         }
         let size = await adb.screenSize(device.serial)
-        let landscape = await adb.isLandscape(device.serial)
-        let frame = Screens.windowFrame(fps: prefs.fps, preferredName: prefs.screenName,
+        let frame: WindowFrame?
+        if let kept = keepFrame {
+            frame = kept
+            keepFrame = nil
+        } else {
+            let landscape = await adb.isLandscape(device.serial)
+            frame = Screens.windowFrame(fps: prefs.fps, preferredName: prefs.screenName,
                                         device: size, landscape: landscape)
+        }
 
         var args = [
             "-s", device.serial,

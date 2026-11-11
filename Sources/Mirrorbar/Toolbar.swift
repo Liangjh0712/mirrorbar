@@ -41,7 +41,7 @@ final class ToolbarController {
 
         // Fade a little when the pointer has been away for a while.
         if panel.frame.insetBy(dx: -12, dy: -12).contains(NSEvent.mouseLocation) { lastHover = Date() }
-        let alpha: CGFloat = Date().timeIntervalSince(lastHover) > 3 ? 0.55 : 1
+        let alpha: CGFloat = Date().timeIntervalSince(lastHover) > 3 ? 0.85 : 1
         if panel.alphaValue != alpha {
             NSAnimationContext.runAnimationGroup { $0.duration = 0.25; panel.animator().alphaValue = alpha }
         }
@@ -58,8 +58,7 @@ final class ToolbarController {
 
     private func makePanel() -> NSPanel {
         let view = ToolbarView { [weak self] action in
-            guard let serial = self?.session.activeSerial else { return false }
-            return await PhoneActions.perform(action, serial: serial)
+            await self?.session.perform(action) ?? false
         }
         let hosting = FirstMouseHostingView(rootView: view)
         let size = hosting.fittingSize
@@ -72,12 +71,9 @@ final class ToolbarController {
         blur.material = .popover
         blur.blendingMode = .behindWindow
         blur.state = .active
-        blur.wantsLayer = true
-        blur.layer?.cornerRadius = 22
-        blur.layer?.cornerCurve = .continuous
-        blur.layer?.masksToBounds = true
-        blur.layer?.borderWidth = 0.5
-        blur.layer?.borderColor = NSColor.separatorColor.cgColor
+        // maskImage (not a layer corner radius) also clips the blur and the window shadow;
+        // a layer mask left white square corners.
+        blur.maskImage = Self.roundedMask(radius: Self.cornerRadius)
         blur.addSubview(hosting)
 
         let panel = NSPanel(contentRect: NSRect(origin: .zero, size: size),
@@ -97,23 +93,24 @@ final class ToolbarController {
         return panel
     }
 
+    static let cornerRadius: CGFloat = 22
+
+    private static func roundedMask(radius: CGFloat) -> NSImage {
+        let edge = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }
+
     /// Frame of the scrcpy window in Cocoa coordinates (origin bottom-left of the menu bar display).
     private static func windowFrame(pid: pid_t) -> NSRect? {
-        guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
-                                                    kCGNullWindowID) as? [[String: Any]],
-              let primary = NSScreen.screens.first
-        else { return nil }
-        for info in list {
-            guard (info[kCGWindowOwnerPID as String] as? pid_t) == pid,
-                  (info[kCGWindowLayer as String] as? Int) == 0,
-                  let dict = info[kCGWindowBounds as String] as? NSDictionary,
-                  let rect = CGRect(dictionaryRepresentation: dict),
-                  rect.width > 100
-            else { continue }
-            return NSRect(x: rect.minX, y: primary.frame.maxY - rect.maxY,
-                          width: rect.width, height: rect.height)
-        }
-        return nil
+        guard let rect = Screens.cgFrame(pid: pid), let primary = NSScreen.screens.first else { return nil }
+        return NSRect(x: rect.minX, y: primary.frame.maxY - rect.maxY, width: rect.width, height: rect.height)
     }
 }
 
@@ -138,6 +135,8 @@ struct ToolbarView: View {
         }
         .padding(.vertical, 8)
         .padding(.horizontal, 5)
+        .overlay(RoundedRectangle(cornerRadius: ToolbarController.cornerRadius)
+            .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5))
     }
 }
 
@@ -145,6 +144,7 @@ struct ToolButton: View {
     let action: PhoneAction
     let perform: (PhoneAction) async -> Bool
 
+    @AppStorage(Key.turnScreenOff) private var screenOff = true
     @State private var hovering = false
     @State private var feedback: Bool?
 
@@ -160,7 +160,7 @@ struct ToolButton: View {
                 }
             }
         } label: {
-            Image(systemName: feedback == nil ? action.symbol : (feedback! ? "checkmark" : "exclamationmark.triangle"))
+            Image(systemName: feedback == nil ? symbol : (feedback! ? "checkmark" : "exclamationmark.triangle"))
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(feedback == false ? Color.orange : (feedback == true ? Color.green : Color.primary))
                 .frame(width: 38, height: 34)
@@ -170,6 +170,11 @@ struct ToolButton: View {
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
             .fill(Color.primary.opacity(hovering ? 0.10 : 0)))
         .onHover { hovering = $0 }
-        .help(action.help)
+        .help(action == .screen ? (screenOff ? "手机亮屏" : "手机息屏（镜像照常）") : action.help)
+    }
+
+    /// The screen button shows what a click will do.
+    private var symbol: String {
+        action == .screen ? (screenOff ? "sun.max" : "moon") : action.symbol
     }
 }

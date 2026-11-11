@@ -4,7 +4,7 @@ import AppKit
 enum PhoneAction: String, CaseIterable, Identifiable {
     case back, home, recents
     case rotate, notifications, screenshot
-    case volumeUp = "volume-up", volumeDown = "volume-down", power
+    case volumeUp = "volume-up", volumeDown = "volume-down", screen, power
     case swipeUp = "swipe-up", swipeDown = "swipe-down"
 
     var id: Self { self }
@@ -12,7 +12,7 @@ enum PhoneAction: String, CaseIterable, Identifiable {
     static let groups: [[PhoneAction]] = [
         [.back, .home, .recents],
         [.rotate, .notifications, .screenshot],
-        [.volumeUp, .volumeDown, .power],
+        [.volumeUp, .volumeDown, .screen, .power],
         [.swipeUp, .swipeDown],
     ]
 
@@ -26,6 +26,7 @@ enum PhoneAction: String, CaseIterable, Identifiable {
         case .screenshot: "camera.viewfinder"
         case .volumeUp: "speaker.plus"
         case .volumeDown: "speaker.minus"
+        case .screen: "moon"
         case .power: "power"
         case .swipeUp: "chevron.up"
         case .swipeDown: "chevron.down"
@@ -43,6 +44,7 @@ enum PhoneAction: String, CaseIterable, Identifiable {
         case .screenshot: "截图：存到桌面并复制"
         case .volumeUp: "音量 +（⌘↑）"
         case .volumeDown: "音量 −（⌘↓）"
+        case .screen: "手机息屏 / 亮屏（镜像照常）"
         case .power: "锁屏 / 亮屏（⌘P）"
         case .swipeUp: "上滑：下一条"
         case .swipeDown: "下滑：上一条"
@@ -61,6 +63,7 @@ enum PhoneActions {
         case .volumeUp: return await key(adb, serial, 24)
         case .volumeDown: return await key(adb, serial, 25)
         case .power: return await key(adb, serial, 26)
+        case .screen: return false  // handled by MirrorSession: needs a scrcpy restart
         case .notifications:
             return await adb.shell(serial, "cmd statusbar expand-notifications").ok
         case .rotate:
