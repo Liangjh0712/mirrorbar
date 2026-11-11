@@ -52,9 +52,9 @@ final class DeviceMonitor {
         let adb = ADB(path: prefs.adbPath)
         guard !adbMissing else { return }
 
-        // A mirroring session that ended badly (or a crash) may have left the refresh rate locked.
-        if RefreshRate.pending != nil, !isBusy(), let device = anyDevice {
-            await RefreshRate.restore(adb: adb, serial: device.serial)
+        // A mirroring session that ended badly (or a crash) may have left phone settings changed.
+        if !PhoneSettings.pending.isEmpty, !isBusy(), let device = anyDevice {
+            await PhoneSettings.restore(adb: adb, serial: device.serial)
         }
 
         guard prefs.autoWifi else { return }

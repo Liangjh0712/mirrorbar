@@ -62,21 +62,34 @@ struct ADB {
         _ = await Shell.run(path, ["disconnect", address], timeout: 5)
     }
 
-    func getSetting(_ serial: String, _ key: String) async -> String? {
-        let value = await shell(serial, "settings get system \(key)").output
+    func getSetting(_ serial: String, _ namespace: String = "system", _ key: String) async -> String? {
+        let value = await shell(serial, "settings get \(namespace) \(key)").output
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty || value == "null" ? nil : value
     }
 
-    func putSetting(_ serial: String, _ key: String, _ value: String) async {
-        _ = await shell(serial, "settings put system \(key) \(value)")
+    func putSetting(_ serial: String, _ namespace: String = "system", _ key: String, _ value: String) async {
+        _ = await shell(serial, "settings put \(namespace) \(key) \(value)")
     }
 
-    /// True when the phone is currently rotated to landscape.
-    func isLandscape(_ serial: String) async -> Bool {
+    func deleteSetting(_ serial: String, _ namespace: String, _ key: String) async {
+        _ = await shell(serial, "settings delete \(namespace) \(key)")
+    }
+
+    /// Current orientation and the screen size as apps see it (swapped in landscape).
+    func viewport(_ serial: String) async -> (landscape: Bool, width: Int, height: Int)? {
         let output = await shell(serial, "dumpsys input | grep -m1 'Viewport INTERNAL'").output
-        guard let range = output.range(of: #"orientation=\d"#, options: .regularExpression) else { return false }
-        return ["1", "3"].contains(output[range].last.map(String.init) ?? "0")
+        guard let o = output.range(of: #"orientation=\d"#, options: .regularExpression),
+              let f = output.range(of: #"logicalFrame=\[0, 0, \d+, \d+\]"#, options: .regularExpression)
+        else { return nil }
+        let landscape = ["1", "3"].contains(String(output[o].suffix(1)))
+        let numbers = output[f].split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) }
+        guard numbers.count == 4 else { return nil }
+        return (landscape, numbers[2], numbers[3])
+    }
+
+    func isLandscape(_ serial: String) async -> Bool {
+        await viewport(serial)?.landscape ?? false
     }
 
     /// Physical screen size in pixels, e.g. 1200x2608.

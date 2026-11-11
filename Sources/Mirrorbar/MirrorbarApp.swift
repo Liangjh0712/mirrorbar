@@ -8,6 +8,7 @@ final class AppState {
 
     let monitor: DeviceMonitor
     let session: MirrorSession
+    private var toolbar: ToolbarController?
 
     private init() {
         Prefs.registerDefaults()
@@ -17,6 +18,7 @@ final class AppState {
         // A scrcpy left over from a crashed run would fight the new one for the phone.
         _ = Shell.runSync("/usr/bin/pkill", ["-f", "window-title=Mirrorbar"], timeout: 3)
         monitor.start()
+        toolbar = ToolbarController(session: session)
     }
 }
 
@@ -32,7 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sigterm = source
     }
 
-    /// mirrorbar://start, mirrorbar://stop, mirrorbar://toggle — for Shortcuts, Raycast or a hotkey tool.
+    /// mirrorbar://start | stop | toggle, plus one URL per toolbar button (mirrorbar://back …),
+    /// for Shortcuts, Raycast or a hotkey tool.
     func application(_ application: NSApplication, open urls: [URL]) {
         MainActor.assumeIsolated {
             let session = AppState.shared.session
@@ -41,7 +44,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case "start": session.start()
                 case "stop": session.stop()
                 case "toggle": session.toggle()
-                default: Log.write("未知链接：\(url)")
+                default:
+                    if let action = PhoneAction(rawValue: url.host ?? ""), let serial = session.activeSerial {
+                        Task { _ = await PhoneActions.perform(action, serial: serial) }
+                    } else {
+                        Log.write("未处理的链接：\(url)")
+                    }
                 }
             }
         }
@@ -93,6 +101,7 @@ struct MenuContent: View {
     @AppStorage(Key.alwaysOnTop) private var alwaysOnTop = false
     @AppStorage(Key.turnScreenOff) private var turnScreenOff = false
     @AppStorage(Key.audioMode) private var audioMode = AudioMode.mac.rawValue
+    @AppStorage(Key.showToolbar) private var showToolbar = true
 
     var body: some View {
         Text(monitor.statusText)
@@ -109,6 +118,7 @@ struct MenuContent: View {
 
         Divider()
 
+        Toggle("显示操作栏", isOn: $showToolbar)
         Toggle("窗口置顶", isOn: restarting($alwaysOnTop))
         Toggle("熄灭手机屏幕", isOn: restarting($turnScreenOff))
         Picker("声音", selection: restarting($audioMode)) {

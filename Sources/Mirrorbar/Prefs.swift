@@ -42,7 +42,8 @@ enum Key {
     static let screenName = "screenName"
     static let extraArgs = "extraArgs"
     static let knownIPs = "knownIPs"
-    static let pendingRestore = "pendingRefreshRestore"
+    static let pendingRestore = "pendingSettingsRestore"
+    static let showToolbar = "showToolbar"
 }
 
 struct Prefs {
@@ -62,6 +63,7 @@ struct Prefs {
     var keyboardMode: KeyboardMode
     var screenName: String
     var extraArgs: String
+    var showToolbar: Bool
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -81,6 +83,7 @@ struct Prefs {
             Key.keyboardMode: KeyboardMode.sdk.rawValue,
             Key.screenName: "",
             Key.extraArgs: "",
+            Key.showToolbar: true,
         ])
     }
 
@@ -102,7 +105,8 @@ struct Prefs {
             audioMode: AudioMode(rawValue: d.string(forKey: Key.audioMode) ?? "") ?? .mac,
             keyboardMode: KeyboardMode(rawValue: d.string(forKey: Key.keyboardMode) ?? "") ?? .sdk,
             screenName: d.string(forKey: Key.screenName) ?? "",
-            extraArgs: d.string(forKey: Key.extraArgs) ?? ""
+            extraArgs: d.string(forKey: Key.extraArgs) ?? "",
+            showToolbar: d.bool(forKey: Key.showToolbar)
         )
     }
 }

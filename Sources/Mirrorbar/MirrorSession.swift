@@ -33,6 +33,8 @@ final class MirrorSession {
     }
 
     var isActive: Bool { state != .idle }
+    var scrcpyPID: pid_t? { process?.processIdentifier }
+    var activeSerial: String? { process == nil ? nil : serial }
 
     var statusText: String? {
         switch state {
@@ -79,7 +81,7 @@ final class MirrorSession {
         process?.waitUntilExit()
         let adbPath = Prefs.current.adbPath
         if let device = monitor.anyDevice ?? serial.map({ AdbDevice(serial: $0, state: "device", model: "") }) {
-            RefreshRate.restoreSync(adbPath: adbPath, serial: device.serial)
+            PhoneSettings.restoreSync(adbPath: adbPath, serial: device.serial)
         }
     }
 
@@ -111,7 +113,7 @@ final class MirrorSession {
 
         let adb = ADB(path: prefs.adbPath)
         if prefs.lockRefreshRate {
-            await RefreshRate.lock(adb: adb, serial: device.serial, fps: prefs.fps)
+            await PhoneSettings.lockRefreshRate(adb: adb, serial: device.serial, fps: prefs.fps)
         }
         let size = await adb.screenSize(device.serial)
         let landscape = await adb.isLandscape(device.serial)
@@ -265,7 +267,7 @@ final class MirrorSession {
         Task {
             await monitor.refresh()
             if let target = monitor.anyDevice?.serial ?? fallback {
-                await RefreshRate.restore(adb: adb, serial: target)
+                await PhoneSettings.restore(adb: adb, serial: target)
             }
         }
     }

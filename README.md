@@ -14,9 +14,11 @@ A macOS menu bar app that keeps [scrcpy](https://github.com/Genymobile/scrcpy) m
 | 锁定手机刷新率 | 镜像期间把小米 / HyperOS 手机锁到 60/90/120Hz，结束后恢复原值；App 崩溃后下次连上手机也会恢复 |
 | 选显示器 | 自动把窗口放到刷新率够高的屏幕上（60Hz 屏只能显示 60fps）；手机横屏时窗口横向居中 |
 | 声音 | 只在 Mac 播放 / Mac 和手机都响 / 关闭 |
-| 菜单快捷开关 | 窗口置顶、熄灭手机屏幕、声音，改了立即生效 |
+| 操作栏 | 贴在镜像窗口右侧，跟着窗口走：返回、主页、后台、横竖屏切换、下拉通知栏、截图、音量加减、锁屏、上滑、下滑 |
+| 截图 | 存到桌面，同时复制到剪贴板 |
+| 菜单快捷开关 | 操作栏、窗口置顶、熄灭手机屏幕、声音，改了立即生效 |
 | 帧率显示 | 菜单里显示实时 fps |
-| 链接控制 | `mirrorbar://start`、`mirrorbar://stop`、`mirrorbar://toggle`，可接快捷指令或 Raycast 绑热键 |
+| 链接控制 | 见下方「链接」，可接快捷指令或 Raycast 绑热键 |
 
 ## 依赖
 
@@ -40,13 +42,30 @@ A macOS menu bar app that keeps [scrcpy](https://github.com/Genymobile/scrcpy) m
 2. 点「开始镜像」。之后拔线，Mirrorbar 会自动切到 Wi-Fi 重新连上
 3. 帧率、码率、分辨率、显示器、键盘模式在「设置…」里改
 
+操作栏只在镜像窗口在最前面时出现，鼠标移开 3 秒后变半透明；不想要可以在菜单里关掉「显示操作栏」。按钮直接发给手机，不用先点镜像窗口。
+
 输中文：在 Mac 上复制，到镜像窗口按 ⌘V，scrcpy 会把 Mac 剪贴板同步到手机再粘贴。
 
 scrcpy 自带的快捷键都能用（默认修饰键是左 ⌥ 或左 ⌘），见 [scrcpy 快捷键文档](https://github.com/Genymobile/scrcpy/blob/master/doc/shortcuts.md)。
 
+## 链接
+
+| 链接 | 作用 |
+|---|---|
+| `mirrorbar://start` / `stop` / `toggle` | 开始、停止、切换镜像 |
+| `mirrorbar://back` / `home` / `recents` | 返回、主页、后台 |
+| `mirrorbar://rotate` | 横竖屏切换 |
+| `mirrorbar://notifications` | 下拉通知栏 |
+| `mirrorbar://screenshot` | 截图 |
+| `mirrorbar://volume-up` / `volume-down` / `power` | 音量加减、锁屏 / 亮屏 |
+| `mirrorbar://swipe-up` / `swipe-down` | 上滑、下滑 |
+
+终端里可以直接 `open mirrorbar://back`。
+
 ## 已知限制
 
 - 手机锁屏时只能看到锁屏界面，要在手机上解锁
+- 横竖屏切换改的是系统旋转（会关掉自动旋转，停止镜像后恢复）；自己锁定方向的 App（很多视频播放页、小米「设置」）不受影响
 - 刷新率锁定只适配了小米 / HyperOS（`is_smart_fps`、`user_refresh_rate`），其他手机会跳过这一步
 - 帧率上限取决于手机屏幕当前刷新率和 Mac 显示器刷新率中较低的那个
 - 日志在 `~/Library/Logs/Mirrorbar/mirrorbar.log`
