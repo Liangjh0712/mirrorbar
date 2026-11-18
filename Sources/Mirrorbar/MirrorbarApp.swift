@@ -44,6 +44,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 case "start": session.start()
                 case "stop": session.stop()
                 case "toggle": session.toggle()
+                case "collapse":
+                    let d = UserDefaults.standard
+                    d.set(!d.bool(forKey: Key.toolbarCollapsed), forKey: Key.toolbarCollapsed)
                 default:
                     if let action = PhoneAction(rawValue: url.host ?? "") {
                         Task { _ = await session.perform(action) }

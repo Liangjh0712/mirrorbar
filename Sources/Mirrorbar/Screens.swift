@@ -63,16 +63,20 @@ enum Screens {
         guard let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements],
                                                     kCGNullWindowID) as? [[String: Any]]
         else { return nil }
+        // Layer 0 normally, the floating layer when pinned (--always-on-top).
+        // scrcpy also owns small helper windows; the mirror is the biggest one.
+        var best: CGRect?
         for info in list {
             guard (info[kCGWindowOwnerPID as String] as? pid_t) == pid,
-                  (info[kCGWindowLayer as String] as? Int) == 0,
+                  let layer = info[kCGWindowLayer as String] as? Int,
+                  layer == 0 || layer == Int(CGWindowLevelForKey(.floatingWindow)),
                   let dict = info[kCGWindowBounds as String] as? NSDictionary,
                   let rect = CGRect(dictionaryRepresentation: dict),
                   rect.width > 100
             else { continue }
-            return rect
+            if best.map({ rect.width * rect.height > $0.width * $0.height }) ?? true { best = rect }
         }
-        return nil
+        return best
     }
 
     /// The scrcpy window's current place, as launch arguments.

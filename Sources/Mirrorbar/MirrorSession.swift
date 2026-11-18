@@ -86,6 +86,11 @@ final class MirrorSession {
             UserDefaults.standard.set(!Prefs.current.lowQuality, forKey: Key.lowQuality)
             restartIfActive()
             return true
+        case .pin:
+            // scrcpy sets always-on-top only at launch; the restart keeps the window in place.
+            UserDefaults.standard.set(!Prefs.current.alwaysOnTop, forKey: Key.alwaysOnTop)
+            restartIfActive()
+            return true
         case .screen:
             // Always "off now": after the phone was used by hand its screen is on
             // again, and one press should put it back to dark.

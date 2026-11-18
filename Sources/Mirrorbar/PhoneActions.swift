@@ -4,7 +4,7 @@ import AppKit
 enum PhoneAction: String, CaseIterable, Identifiable {
     case back, home, recents
     case rotate, notifications, screenshot
-    case volumeUp = "volume-up", volumeDown = "volume-down", quality = "low-quality", screen, unlock, power
+    case volumeUp = "volume-up", volumeDown = "volume-down", quality = "low-quality", screen, unlock, power, pin
     case swipeUp = "swipe-up", swipeDown = "swipe-down"
 
     var id: Self { self }
@@ -29,6 +29,7 @@ enum PhoneAction: String, CaseIterable, Identifiable {
         case .quality: "headphones"
         case .screen: "moon"
         case .unlock: "lock.open"
+        case .pin: "pin"
         case .power: "power"
         case .swipeUp: "chevron.up"
         case .swipeDown: "chevron.down"
@@ -48,6 +49,7 @@ enum PhoneAction: String, CaseIterable, Identifiable {
         case .volumeDown: "音量 −（⌘↓）"
         case .quality: "低画质（听歌）：画面降到 30fps，声音更稳"
         case .screen: "手机息屏（镜像照常）；用过手机后再按一下就又黑了"
+        case .pin: "置顶：镜像窗口和操作栏一直在最前，切到别的 App 也看得见"
         case .unlock: "解锁：点亮手机并输入锁屏密码，解锁后按设置自动息屏"
         case .power: "锁屏 / 亮屏（⌘P）"
         case .swipeUp: "上滑：下一条"
@@ -67,7 +69,7 @@ enum PhoneActions {
         case .volumeUp: return await key(adb, serial, 24)
         case .volumeDown: return await key(adb, serial, 25)
         case .power: return await key(adb, serial, 26)
-        case .screen, .quality: return false  // handled by MirrorSession
+        case .screen, .quality, .pin: return false  // handled by MirrorSession
         case .unlock: return await unlock(adb, serial)
         case .notifications:
             return await adb.shell(serial, "cmd statusbar expand-notifications").ok

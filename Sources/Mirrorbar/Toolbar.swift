@@ -6,6 +6,7 @@ import SwiftUI
 final class ToolbarController {
     private let session: MirrorSession
     private var panel: NSPanel?
+    private var hosting: NSView?
     private var timer: Timer?
     private var lastHover = Date()
 
@@ -27,6 +28,11 @@ final class ToolbarController {
         guard Prefs.current.alwaysOnTop || front == pid || front == getpid() else { hide(); return }
 
         let panel = self.panel ?? makePanel()
+        // Collapsing or expanding changes the content's size; follow it.
+        if let hosting, hosting.fittingSize != panel.frame.size {
+            panel.setContentSize(hosting.fittingSize)
+            panel.invalidateShadow()
+        }
         let size = panel.frame.size
         let screen = NSScreen.screens.first { $0.frame.contains(NSPoint(x: window.midX, y: window.midY)) }
             ?? NSScreen.main
@@ -64,10 +70,12 @@ final class ToolbarController {
         let size = hosting.fittingSize
         hosting.frame = NSRect(origin: .zero, size: size)
         hosting.autoresizingMask = [.width, .height]
+        self.hosting = hosting
 
         // AppKit blur with state .active: SwiftUI materials go flat and see-through
         // in a window that is never key.
         let blur = NSVisualEffectView(frame: NSRect(origin: .zero, size: size))
+        blur.autoresizingMask = [.width, .height]
         blur.material = .popover
         blur.blendingMode = .behindWindow
         blur.state = .active
@@ -122,14 +130,19 @@ final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
 struct ToolbarView: View {
     let perform: (PhoneAction) async -> Bool
 
+    @AppStorage(Key.toolbarCollapsed) private var collapsed = false
+
     var body: some View {
         VStack(spacing: 2) {
-            ForEach(Array(PhoneAction.groups.enumerated()), id: \.offset) { index, group in
-                if index > 0 {
+            // Always shown: pin, and the button that folds the rest away.
+            ToolButton(action: .pin, perform: perform)
+            CollapseButton(collapsed: $collapsed)
+            if !collapsed {
+                ForEach(PhoneAction.groups, id: \.self) { group in
                     Divider().frame(width: 22).padding(.vertical, 5)
-                }
-                ForEach(group) { action in
-                    ToolButton(action: action, perform: perform)
+                    ForEach(group) { action in
+                        ToolButton(action: action, perform: perform)
+                    }
                 }
             }
         }
@@ -145,6 +158,7 @@ struct ToolButton: View {
     let perform: (PhoneAction) async -> Bool
 
     @AppStorage(Key.lowQuality) private var lowQuality = false
+    @AppStorage(Key.alwaysOnTop) private var alwaysOnTop = false
     @State private var hovering = false
     @State private var feedback: Bool?
 
@@ -173,15 +187,36 @@ struct ToolButton: View {
         .help(helpText)
     }
 
-    /// The low-quality button stays highlighted while the mode is on.
-    private var isOn: Bool { action == .quality && lowQuality }
+    /// Low quality and pin stay highlighted while on.
+    private var isOn: Bool { (action == .quality && lowQuality) || (action == .pin && alwaysOnTop) }
 
     private var helpText: String {
         switch action {
         case .quality: lowQuality ? "低画质（听歌）已开，点一下恢复正常画质" : action.help
+        case .pin: alwaysOnTop ? "已置顶，点一下取消" : action.help
         default: action.help
         }
     }
 
-    private var symbol: String { action.symbol }
+    private var symbol: String { action == .pin && alwaysOnTop ? "pin.fill" : action.symbol }
+}
+
+/// Folds the toolbar down to its first two buttons, or opens it again.
+struct CollapseButton: View {
+    @Binding var collapsed: Bool
+    @State private var hovering = false
+
+    var body: some View {
+        Button { collapsed.toggle() } label: {
+            Image(systemName: collapsed ? "chevron.down.2" : "chevron.up.2")
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 38, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(Color.primary.opacity(hovering ? 0.10 : 0)))
+        .onHover { hovering = $0 }
+        .help(collapsed ? "展开操作栏" : "收起操作栏")
+    }
 }

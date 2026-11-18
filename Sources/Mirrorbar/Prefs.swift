@@ -58,6 +58,7 @@ enum Key {
     static let pendingRestore = "pendingSettingsRestore"
     static let showToolbar = "showToolbar"
     static let lowQuality = "lowQuality"
+    static let toolbarCollapsed = "toolbarCollapsed"
 }
 
 /// Low-quality mode: for listening to music or a video's sound on the Mac.
