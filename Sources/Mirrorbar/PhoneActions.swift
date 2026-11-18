@@ -4,7 +4,7 @@ import AppKit
 enum PhoneAction: String, CaseIterable, Identifiable {
     case back, home, recents
     case rotate, notifications, screenshot
-    case volumeUp = "volume-up", volumeDown = "volume-down", quality = "low-quality", screen, power
+    case volumeUp = "volume-up", volumeDown = "volume-down", quality = "low-quality", screen, unlock, power
     case swipeUp = "swipe-up", swipeDown = "swipe-down"
 
     var id: Self { self }
@@ -12,7 +12,7 @@ enum PhoneAction: String, CaseIterable, Identifiable {
     static let groups: [[PhoneAction]] = [
         [.back, .home, .recents],
         [.rotate, .notifications, .screenshot],
-        [.volumeUp, .volumeDown, .quality, .screen, .power],
+        [.volumeUp, .volumeDown, .quality, .screen, .unlock, .power],
         [.swipeUp, .swipeDown],
     ]
 
@@ -28,6 +28,7 @@ enum PhoneAction: String, CaseIterable, Identifiable {
         case .volumeDown: "speaker.minus"
         case .quality: "headphones"
         case .screen: "moon"
+        case .unlock: "lock.open"
         case .power: "power"
         case .swipeUp: "chevron.up"
         case .swipeDown: "chevron.down"
@@ -46,7 +47,8 @@ enum PhoneAction: String, CaseIterable, Identifiable {
         case .volumeUp: "音量 +（⌘↑）"
         case .volumeDown: "音量 −（⌘↓）"
         case .quality: "低画质（听歌）：画面降到 30fps，声音更稳"
-        case .screen: "手机息屏 / 亮屏（镜像照常）"
+        case .screen: "手机息屏（镜像照常）；用过手机后再按一下就又黑了"
+        case .unlock: "解锁：点亮手机并输入锁屏密码，解锁后按设置自动息屏"
         case .power: "锁屏 / 亮屏（⌘P）"
         case .swipeUp: "上滑：下一条"
         case .swipeDown: "下滑：上一条"
@@ -65,7 +67,8 @@ enum PhoneActions {
         case .volumeUp: return await key(adb, serial, 24)
         case .volumeDown: return await key(adb, serial, 25)
         case .power: return await key(adb, serial, 26)
-        case .screen, .quality: return false  // handled by MirrorSession: needs a scrcpy restart
+        case .screen, .quality: return false  // handled by MirrorSession
+        case .unlock: return await unlock(adb, serial)
         case .notifications:
             return await adb.shell(serial, "cmd statusbar expand-notifications").ok
         case .rotate:
@@ -76,6 +79,32 @@ enum PhoneActions {
         case .swipeUp, .swipeDown:
             return await swipe(adb, serial, up: action == .swipeUp)
         }
+    }
+
+    /// Wakes the phone and, if the lock screen is up, types the PIN saved in the
+    /// keychain. The PIN goes over stdin and is never logged. One try only: a wrong PIN
+    /// repeated would lock the phone out.
+    private static func unlock(_ adb: ADB, _ serial: String) async -> Bool {
+        _ = await adb.shell(serial, "input keyevent KEYCODE_WAKEUP")
+        try? await Task.sleep(for: .milliseconds(300))
+        guard await adb.keyguardShowing(serial) else { return true }
+        // Brings up the PIN pad of a secure lock screen (a plain one just goes away).
+        _ = await adb.shell(serial, "wm dismiss-keyguard")
+        guard let pin = LockPin.load() else {
+            Log.write("解锁：还没存锁屏密码，在设置里存一次")
+            return false
+        }
+        try? await Task.sleep(for: .milliseconds(500))
+        _ = await adb.shellScript(serial, "input text \(pin)\ninput keyevent KEYCODE_ENTER\n")
+        for _ in 0..<6 {
+            try? await Task.sleep(for: .milliseconds(300))
+            if !(await adb.keyguardShowing(serial)) {
+                Log.write("已解锁")
+                return true
+            }
+        }
+        Log.write("解锁失败：锁屏还在，检查设置里存的锁屏密码")
+        return false
     }
 
     private static func key(_ adb: ADB, _ serial: String, _ code: Int) async -> Bool {

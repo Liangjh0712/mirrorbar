@@ -10,30 +10,38 @@ struct ShellResult {
 enum Shell {
     /// Run a command off the main thread and collect stdout + stderr.
     /// `includeStderr: false` keeps binary stdout (e.g. a PNG) clean of warnings.
+    /// `input` goes to stdin, for text that should not show up in a process list.
     static func run(_ executable: String, _ arguments: [String],
-                    timeout: TimeInterval = 10, includeStderr: Bool = true) async -> ShellResult {
+                    timeout: TimeInterval = 10, includeStderr: Bool = true,
+                    input: Data? = nil) async -> ShellResult {
         await withCheckedContinuation { continuation in
             DispatchQueue.global().async {
                 continuation.resume(returning: runSync(executable, arguments, timeout: timeout,
-                                                       includeStderr: includeStderr))
+                                                       includeStderr: includeStderr, input: input))
             }
         }
     }
 
     /// Blocking variant, used when the app is quitting.
     static func runSync(_ executable: String, _ arguments: [String],
-                        timeout: TimeInterval = 10, includeStderr: Bool = true) -> ShellResult {
+                        timeout: TimeInterval = 10, includeStderr: Bool = true,
+                        input: Data? = nil) -> ShellResult {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = includeStderr ? pipe : FileHandle.nullDevice
-        process.standardInput = FileHandle.nullDevice
+        let stdin = input.map { _ in Pipe() }
+        process.standardInput = stdin ?? FileHandle.nullDevice
         do {
             try process.run()
         } catch {
             return ShellResult(status: -1, data: Data(error.localizedDescription.utf8))
+        }
+        if let stdin, let input {
+            stdin.fileHandleForWriting.write(input)
+            try? stdin.fileHandleForWriting.close()
         }
         let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: killer)

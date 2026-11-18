@@ -144,7 +144,6 @@ struct ToolButton: View {
     let action: PhoneAction
     let perform: (PhoneAction) async -> Bool
 
-    @AppStorage(Key.turnScreenOff) private var screenOff = true
     @AppStorage(Key.lowQuality) private var lowQuality = false
     @State private var hovering = false
     @State private var feedback: Bool?
@@ -179,14 +178,10 @@ struct ToolButton: View {
 
     private var helpText: String {
         switch action {
-        case .screen: screenOff ? "手机亮屏" : "手机息屏（镜像照常）"
         case .quality: lowQuality ? "低画质（听歌）已开，点一下恢复正常画质" : action.help
         default: action.help
         }
     }
 
-    /// The screen button shows what a click will do.
-    private var symbol: String {
-        action == .screen ? (screenOff ? "sun.max" : "moon") : action.symbol
-    }
+    private var symbol: String { action.symbol }
 }

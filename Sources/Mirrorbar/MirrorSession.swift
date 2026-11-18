@@ -81,14 +81,39 @@ final class MirrorSession {
 
     /// Toolbar buttons and mirrorbar://<action> URLs.
     func perform(_ action: PhoneAction) async -> Bool {
-        let toggles: [PhoneAction: String] = [.screen: Key.turnScreenOff, .quality: Key.lowQuality]
-        if let key = toggles[action] {
-            UserDefaults.standard.set(!UserDefaults.standard.bool(forKey: key), forKey: key)
+        switch action {
+        case .quality:
+            UserDefaults.standard.set(!Prefs.current.lowQuality, forKey: Key.lowQuality)
             restartIfActive()
             return true
+        case .screen:
+            // Always "off now": after the phone was used by hand its screen is on
+            // again, and one press should put it back to dark.
+            return await setScreenOff(true)
+        case .unlock:
+            guard let serial = activeSerial else { return false }
+            let ok = await PhoneActions.perform(.unlock, serial: serial)
+            // Waking the phone lights its screen; dark again if that is the setting.
+            if ok && Prefs.current.turnScreenOff {
+                try? await Task.sleep(for: .milliseconds(400))
+                _ = await setScreenOff(true)
+            }
+            return ok
+        default:
+            guard let serial = activeSerial else { return false }
+            return await PhoneActions.perform(action, serial: serial)
         }
-        guard let serial = activeSerial else { return false }
-        return await PhoneActions.perform(action, serial: serial)
+    }
+
+    /// Phone screen off (or back on) right away, and remembered for the next launch.
+    /// Uses scrcpy's ⌘O / ⌘⇧O; without the Accessibility permission, restarts scrcpy.
+    func setScreenOff(_ off: Bool) async -> Bool {
+        let changed = Prefs.current.turnScreenOff != off
+        UserDefaults.standard.set(off, forKey: Key.turnScreenOff)
+        guard let pid = scrcpyPID else { return true }
+        if await ScrcpyKeys.screen(on: !off, pid: pid) { return true }
+        if changed || off { restartIfActive() }
+        return true
     }
 
     /// Called when the app quits.

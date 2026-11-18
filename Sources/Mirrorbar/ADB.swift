@@ -35,6 +35,17 @@ struct ADB {
         await Shell.run(path, ["-s", serial, "shell", command], timeout: timeout)
     }
 
+    /// Runs a script read from stdin, so its text (a lock-screen PIN) stays out of
+    /// the Mac's process list.
+    func shellScript(_ serial: String, _ script: String, timeout: TimeInterval = 8) async -> ShellResult {
+        await Shell.run(path, ["-s", serial, "shell"], timeout: timeout, input: Data(script.utf8))
+    }
+
+    func keyguardShowing(_ serial: String) async -> Bool {
+        await shell(serial, "dumpsys window 2>/dev/null | grep -m1 'isKeyguardShowing='").output
+            .contains("isKeyguardShowing=true")
+    }
+
     /// IPv4 address of wlan0, read over the current connection (works over USB).
     func wifiIP(_ serial: String) async -> String? {
         let output = await shell(serial, "ip -f inet addr show wlan0").output

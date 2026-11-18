@@ -121,7 +121,9 @@ struct MenuContent: View {
 
         Toggle("显示操作栏", isOn: $showToolbar)
         Toggle("窗口置顶", isOn: restarting($alwaysOnTop))
-        Toggle("手机息屏（镜像照常）", isOn: restarting($turnScreenOff))
+        Toggle("手机息屏（镜像照常）", isOn: Binding(
+            get: { turnScreenOff },
+            set: { value in Task { _ = await session.setScreenOff(value) } }))
         Toggle("低画质（听歌，更流畅）", isOn: restarting($lowQuality))
         Picker("声音", selection: restarting($audioMode)) {
             ForEach(AudioMode.allCases) { Text($0.label).tag($0.rawValue) }
@@ -204,6 +206,9 @@ struct SettingsView: View {
                 Text("输中文：在 Mac 上复制，到镜像窗口按 ⌘V 粘贴。")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("解锁") {
+                UnlockPinRow()
+            }
             Section("高级") {
                 TextField("scrcpy 路径", text: $scrcpyPath)
                 TextField("adb 路径", text: $adbPath)
@@ -231,5 +236,41 @@ struct SettingsView: View {
             Log.write("登录时启动设置失败：\(error.localizedDescription)")
             launchAtLogin = SMAppService.mainApp.status == .enabled
         }
+    }
+}
+
+/// Lock-screen PIN for the toolbar's unlock button. Stored in the keychain;
+/// the field never shows a saved PIN back.
+struct UnlockPinRow: View {
+    @State private var pin = ""
+    @State private var isSet = LockPin.isSet
+    @State private var note: String?
+
+    var body: some View {
+        HStack {
+            SecureField(isSet ? "已保存，输入新密码可替换" : "手机锁屏密码（数字或字母）", text: $pin)
+                .onSubmit(save)
+            Button("保存", action: save).disabled(pin.isEmpty)
+            if isSet {
+                Button("清除") {
+                    LockPin.clear()
+                    isSet = LockPin.isSet
+                    note = "已清除"
+                }
+            }
+        }
+        Text(note ?? "存在 Mac 钥匙串里，只给操作栏的解锁按钮用。指纹、人脸只能在手机上解。")
+            .font(.caption).foregroundStyle(.secondary)
+    }
+
+    private func save() {
+        guard LockPin.isValid(pin) else {
+            note = "只支持 4 到 32 位数字或字母"
+            return
+        }
+        note = LockPin.save(pin) ? "已保存" : "保存失败，看日志"
+        if note != "已保存" { Log.write("锁屏密码存入钥匙串失败") }
+        pin = ""
+        isSet = LockPin.isSet
     }
 }
